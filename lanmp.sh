@@ -373,14 +373,16 @@ conf_apache_php(){
 VHOSTS_CONF
 
     # php service test
+    cd ${main_dir}
+    if [ ! -d ./conf ];the
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/index.php
+    else
+        cd ./conf
+    fi
     if [ ! -d ${web_root}/test ];then
         mkdir -p ${web_root}/test
     fi
-    cat >${web_root}/test/index.php<<TEST
-<?php
-    echo "The php parsed successfully!";
-?>
-TEST
+    mv ./index.php ${web_root}/test/
 }
 
 install_apr(){
