@@ -13,7 +13,6 @@ green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-
 mysql_location=$(grep '^mysql=' /.lanmp.conf |awk -F '=' '{print $NF}')
 mysql_data_dir=$(grep '^mysql_data=' ./lanmp.conf |awk -F '=' '{print $NF}')
 apache_location=$(grep '^apache=' ./lanmp.conf |awk -F '=' '{print $NF}')
@@ -375,7 +374,7 @@ VHOSTS_CONF
     # php service test
     cd ${main_dir}
     if [ ! -d ./conf ];the
-        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/index.php
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/index.php
     else
         cd ./conf
     fi
@@ -524,10 +523,10 @@ conf_nginx(){
 
     # get conf for nginx.
     if [ ! -d ./conf ];then
-        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/nginx
-        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/nginx.conf
-        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/index.php
-        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/vhost_test.conf
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/nginx
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/nginx.conf
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/index.php
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/vhost_test.conf
     else
         cd ./conf
     fi
@@ -832,7 +831,7 @@ elif [ `cat /etc/redhat-release |awk -F '.' '{print $1}'|awk '{print $NF}'` -ne 
 fi
 
 if [ ! -s ./lanmp.conf ];then
-    wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/lanmp.conf
+    wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/lanmp.conf
 fi
 
 case ${1} in
