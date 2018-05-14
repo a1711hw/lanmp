@@ -50,9 +50,7 @@ php-7.0
 php-5.6
 )
 
-
-
-
+# print info
 blank_line(){
     cat<<EOF
 
@@ -94,6 +92,11 @@ tar_info(){
     fi
 }
 
+start_info(){
+    echo
+    echo -e "[${yellow}Warning!${plain}] The ${1} service has started."
+}
+
 complete_info(){
     echo
     echo -e "[${green}Info!${plain}] The ${1} server install success.${plain}"
@@ -112,6 +115,7 @@ check_ok(){
     fi
 }
 
+# Basic part.
 disable_selinux(){
     if [ -s /etc/selinux/config ] && grep 'SELINUX=enforcing' /etc/selinux/config; then
         sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -149,6 +153,7 @@ add_firewalld(){
     fi
 }
 
+# get version
 get_mysql_ver(){
     while true
     do
@@ -270,7 +275,8 @@ download(){
 
 # mysql
 conf_mysql(){
-    # MySQL configuration file.
+    # MySQL configuration.
+    [ -s /etc/my.cnf ] && mv /etc/my.cnf /etc/my.cnf.bak
     if [ "${mysql_ver}" == "MySQL-5.5" ];then
         mem=$(free -m | awk '/Mem/ {print $2}')
         if [ ${mem} -gt "800" ] && [ ${mem} -lt "1000" ];then
@@ -295,6 +301,16 @@ read_rnd_buffer_size = 2M
 sql_mode=NO_ENGINE_SUBSTITUTTON,STRICT_TRANS_TABLES
 EOF
     fi
+
+    [ -s /etc/init.d/mysqld ] && mv /etc/init.d/mysqld /etc/init.d/mysqld.bak
+    cp support-files/mysql.server /etc/init.d/mysqld
+    sed -i "s#^datadir=#datadir=${mysql_data_dir}#g" /etc/init.d/mysqld
+    chmod 755 /etc/init.d/mysqld
+    chkconfig --add mysqld
+    chkconfig mysqld on
+
+    echo "PATH=${PATH}:${mysql_location}/bin" > /etc/profile.d/mysql.sh
+    source /etc/profile.d/mysql.sh
 }
 
 install_mysql(){
@@ -302,9 +318,21 @@ install_mysql(){
     if [ -d ${mysql_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The mysql already installed."
+        if ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null ;then
+            start_info mysql
+        else
+            /etc/init.d/mysqld start
+            check_ok mysql start
+        fi
         return
+    elif ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null ;then
+        echo
+        echo -e "$[{red}Error!${plain}] Please uninstall the mysql service that you have installed."
+        exit 1
     fi
-    rpm -qa |grep -q mysql && yum remove -y mysql
+
+    rpm -qa |grep mysql >/dev/null
+    [ $? -eq 0 ] && yum remove -y mysql
 
     # The installation depends on the software package.
     for mysql_dep in perl perl-devel libaio autoconf
@@ -333,24 +361,11 @@ install_mysql(){
     # MySQL initialization.
     ./scripts/mysql_install_db --user=mysql --datadir=${mysql_data_dir}
     check_ok mysql install
-
-    # Copy the configuration file.
-    [ -s /etc/my.cnf ] && mv /etc/my.cnf /etc/my.cnf.bak
     conf_mysql
-
-    # Start mysql server.
-    [ -s /etc/init.d/mysqld ] && mv /etc/init.d/mysqld /etc/init.d/mysqld.bak
-    cp support-files/mysql.server /etc/init.d/mysqld
-    sed -i "s#^datadir=#datadir=${mysql_data_dir}#g" /etc/init.d/mysqld
-    chmod 755 /etc/init.d/mysqld
-    chkconfig --add mysqld
-    chkconfig mysqld on
     /etc/init.d/mysqld start
     check_ok mysql start
 
-    # About the mysql service security configuration.
-    echo "PATH=${PATH}:${mysql_location}/bin" > /etc/profile.d/mysql.sh
-    source /etc/profile.d/mysql.sh
+    # MySQL security configuration.
     echo
     read -p "Please enter the mysql server root password: " mysql_root_pass
     mysqladmin -uroot password "${mysql_root_pass}"
@@ -430,33 +445,59 @@ install_apr(){
 
 install_apache(){
     install_info apache
-    if [ ! -d ${apache_location} ];then
-        get_apache_ver
-        for apache_dep in pcre pcre-devel expat-devel openssl openssl-devel
-        do
-            yum_deppak ${apache_dep}
-        done
-        install_apr
-        echo
-        echo -e "${green}Info${plain}. Install apache..."
-        cd /usr/local/src
-        download ${httpd_ver}.tar.gz ${httpd_link}
-        tar_info ${httpd_ver}
-        cd ${httpd_ver}
-        ./configure --prefix=${apache_location} \
-        --with-apr=/usr/local/apr \
-        --with-apr-util=/usr/local/apr-util \
-        --with-ssl \
-        --enable-so \
-        --enable-mods-shared=mots
-        check_ok apache configure
-        make && make install
-        conf_apache_php
-    else
+
+    if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null
+    then
+        killall nginx >/dev/null 2>&1
+        chkconfig --del nginx
+    fi
+
+    if ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null
+    then
+        killall php-fpm >/dev/null 2>&1
+        chkconfig --del php-fpm
+    fi
+
+    if [ -d ${apache_location} ] ;then
         echo
         echo -e "[${yellow}Warning!${plain}] The apache already installed."
+        if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+            start_info httpd
+        else
+            ${apache_location}/bin/apachectl start
+            check_ok httpd start
+        fi
         return
+    elif ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+        echo
+        echo -e "$[{red}Error!${plain}] Please uninstall the httpd service that you have installed."
+        exit 1
     fi
+
+    get_apache_ver
+    for apache_dep in pcre pcre-devel expat-devel openssl openssl-devel
+    do
+        yum_deppak ${apache_dep}
+    done
+
+    install_apr
+
+    echo
+    echo -e "${green}Info${plain}. Install apache..."
+    cd /usr/local/src
+    download ${httpd_ver}.tar.gz ${httpd_link}
+    tar_info ${httpd_ver}
+    cd ${httpd_ver}
+    make clean
+    ./configure --prefix=${apache_location} \
+    --with-apr=/usr/local/apr \
+    --with-apr-util=/usr/local/apr-util \
+    --with-ssl \
+    --enable-so \
+    --enable-mods-shared=mots
+    check_ok apache configure
+    make && make install
+    conf_apache_php
     add_firewalld
     complete_info apache
 }
@@ -476,7 +517,9 @@ install_php(){
         echo 
         echo -e "[${red}Error!${plain}] You must first install the MySQL service."
         exit 1
-    elif [ -d ${php_location} ];then
+    fi
+
+    if [ -d ${php_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The php already installed."
         return
@@ -516,7 +559,7 @@ install_php(){
     --enable-sockets \
     --enable-exif \
     --enable-bcmath
-    
+
     check_ok php configure
     make
     check_ok php make
@@ -525,8 +568,12 @@ install_php(){
     cp php.ini-production ${php_location}/etc/php.ini
     conf_php
     complete_info php
-    ${apache_location}/bin/apachectl start
-    check_ok apache start
+    if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+        return
+    else
+        ${apache_location}/bin/apachectl start
+        check_ok httpd start
+    fi
 }
 
 # nginx
@@ -575,11 +622,27 @@ conf_nginx(){
 
 install_nginx(){
     install_info nginx
+
+    if ps -ef |grep -q 'httpd' |grep -v 'grep'  >/dev/null;then
+        killall httpd >/dev/null 2>&1
+    fi
+
     if [ -d ${nginx_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The nginx already installed."
+        if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null ;then
+            start_info nginx
+        else
+            /etc/init.d/nginx start
+            check_ok nginx start
+        fi
         return
+    elif ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null ;then
+        echo
+        echo -e "$[{red}Error!${plain}] Please uninstall the nginx service that you have installed."
+        exit 1
     fi
+
     for nginx_dep in pcre pcre-devel openssl openssl-devel
     do
         yum_deppak ${nginx_dep}
@@ -589,17 +652,13 @@ install_nginx(){
     download ${nginx_ver}.tar.gz ${nginx_link}
     tar_info ${nginx_ver}
     cd ${nginx_ver}
-
+    make clean
     ./configure --prefix=${nginx_location} \
     --with-http_ssl_module
     check_ok nginx configure
     make &&  make install
     check_ok nginx install
     conf_nginx
-    if ps -ef |grep -q 'httpd'
-    then
-        killall httpd >/dev/null 2>&1
-    fi
     /etc/init.d/nginx start
     check_ok nginx start
     add_firewalld
@@ -614,19 +673,12 @@ conf_php_fpm(){
     sed -i 's/expose_php = On/expose_php = Off/g' ${php_fpm_location}/etc/php.ini
     sed -i 's/disable_functions = /disable_functions = eval,assert,popen,passthru,escapeshellarg,escapeshellcmd,passthru,exec,system,chroot,scandir,chgrp,chown,escapeshellcmd,escapeshellarg,shell_exec,proc_get_status,ini_alter,ini_restore,dl,pfsockopen,openlog,syslog,readlink,symlink,leak,popepassthru,stream_socket_server,popen,proc_open,proc_close,phpinfo,fsocket,fsockopen/g' ${php_fpm_location}/etc/php.ini
 
-    if [ -s ${php_fpm_location}/etc/php-fpm.conf.default ];then
-        cp ${php_fpm_location}/etc/php-fpm.conf.default ${php_fpm_location}/etc/php-fpm.conf
-        sed -i '/\[global\]/a\include=etc/php-fpm.d\/*.conf' ${php_fpm_location}/etc/php-fpm.conf
-        sed -i '/\[global\]/a\error_log = log\/php-fpm.log' ${php_fpm_location}/etc/php-fpm.conf
-        sed -i '/\[global\]/a\pid = run\/php-fpm.pid' ${php_fpm_location}/etc/php-fpm.conf
-    else
-        cat >${php_fpm_location}/etc/php-fpm.conf<<PHP_FPM
+    cat >${php_fpm_location}/etc/php-fpm.conf<<PHP_FPM
 [global]
 pid = run/php-fpm.pid
 error_log = log/php-fpm.log
 include=etc/php-fpm.d/*.conf
 PHP_FPM
-    fi
 
     mkdir ${php_fpm_location}/etc/php-fpm.d/
     cat >${php_fpm_location}/etc/php-fpm.d/test.conf<<EOF
@@ -647,11 +699,23 @@ EOF
 
 install_php_fpm(){
     install_info php-fpm
-    if [ -d ${php_fpm_location} ];then
+
+    if [ -d ${php_fpm_location} ] ;then
         echo
         echo -e "[${yellow}Warning!${plain}] The php-fpm already installed."
+        if ps -ef|grep 'php-fpm' |grep -v 'grep' >/dev/null ;then
+            start_info php-fpm
+        else
+            /etc/init.d/php-fpm start
+            check_ok php-fpm start
+        fi
         return
+    elif ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null ;then
+        echo
+        echo -e "$[{red}Error!${plain}] Please uninstall the php-fpm service that you have installed."
+        exit 1
     fi
+
     # The installation depends on the software package.
     for php_frm_dep in openssl-devel libcurl-devel libxml2-devel libjpeg-devel epel-release libmcrypt-devel libpng-devel freetype-devel libtool-ltdl-devel perl-devel bzip2 bzip2-devel
     do
@@ -713,11 +777,12 @@ install_php_fpm(){
 }
 
 uninstall_mysql(){
-    if ps -ef |grep -q 'mysqld'
+    if ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null
     then
         /etc/init.d/mysqld stop >/dev/null 2>&1
     fi
-    chkconfig --del mysqld >/dev/null 2>&1
+    chkconfig --del mysqld
+    mv /data/mysql /data/mysql_bak$(date +"%y-%m-%d-%H.%M")
     rm -rf ${mysql_location}
     rm -rf /etc/my.cnf
     rm -rf /etc/init.d/mysqld
@@ -728,10 +793,11 @@ uninstall_mysql(){
 }
 
 uninstall_apache(){
-    if ps -ef |grep -q 'httpd'
+    if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null
     then
         ${apache_location}/bin/apachectl stop >/dev/null 2>&1
     fi
+    mv /data/www /data/www_bak$(date +"%y-%m-%d-%H.%M")
     rm -rf ${apache_location}
     rm -rf /usr/local/apr
     rm -rf /usr/local/apr-util
@@ -741,22 +807,24 @@ uninstall_apache(){
 }
 
 uninstall_nginx(){
-    if ps -ef |grep -q 'nginx'
+    if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null
     then
         /etc/init.d/nginx stop >/dev/null 2>&1
     fi
-    chkconfig --del nginx >/dev/null 2>&1
+    chkconfig --del nginx
+    mv /data/www /data/www_bak$(date +"%y-%m-%d-%H.%M")
     rm -rf ${nginx_location}
     rm -rf /etc/init.d/nginx
     echo
     echo -e "[${green}Info!${plain}] The nginx uninstall success!"
 }
+
 uninstall_php_fpm(){
-    if ps -ef |grep -q 'php-fpm'
+    if ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null
     then
         /etc/init.d/php-fpm stop >/dev/null 2>&1
     fi
-    chkconfig --del php-fpm >/dev/null 2>&1
+    chkconfig --del php-fpm
     rm -rf ${php_fpm_location}
     rm -rf /etc/init.d/php-fpm
     echo
@@ -816,6 +884,7 @@ uninstall_lamp(){
     uninstall_mysql
     echo
     echo -e "[${green}Info!${plain}] The lnmp uninstall success!"
+    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/www_bak"
     echo -e "[${green}Info!${plain}] Thanks for your use this script."
     blank_line
 }
@@ -828,6 +897,7 @@ uninstall_lnmp(){
     uninstall_nginx
     echo
     echo -e "[${green}Info!${plain}] The lnmp uninstall success!"
+    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/www_bak"
     echo -e "[${green}Info!${plain}] Thanks for your use this script."
     blank_line
 }
