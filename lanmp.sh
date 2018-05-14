@@ -616,7 +616,7 @@ conf_php_fpm(){
 
     if [ -s ${php_fpm_location}/etc/php-fpm.conf.default ];then
         cp ${php_fpm_location}/etc/php-fpm.conf.default ${php_fpm_location}/etc/php-fpm.conf
-        sed -i '/\[global\]/a\include=php-fpm.d\/*.conf' ${php_fpm_location}/etc/php-fpm.conf
+        sed -i '/\[global\]/a\include=etc/php-fpm.d\/*.conf' ${php_fpm_location}/etc/php-fpm.conf
         sed -i '/\[global\]/a\error_log = log\/php-fpm.log' ${php_fpm_location}/etc/php-fpm.conf
         sed -i '/\[global\]/a\pid = run\/php-fpm.pid' ${php_fpm_location}/etc/php-fpm.conf
     else
@@ -624,7 +624,7 @@ conf_php_fpm(){
 [global]
 pid = run/php-fpm.pid
 error_log = log/php-fpm.log
-include=php-fpm.d/*.conf
+include=etc/php-fpm.d/*.conf
 PHP_FPM
     fi
 
