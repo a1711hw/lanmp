@@ -717,8 +717,8 @@ uninstall_mysql(){
     then
         /etc/init.d/mysqld stop >/dev/null 2>&1
     fi
+    chkconfig --del mysqld >/dev/null 2>&1
     rm -rf ${mysql_location}
-    rm -rf /data
     rm -rf /etc/my.cnf
     rm -rf /etc/init.d/mysqld
     rm -rf /etc/profile.d/mysql.sh
@@ -746,10 +746,11 @@ uninstall_nginx(){
     then
         /etc/init.d/nginx stop >/dev/null 2>&1
     fi
-    chkconfig --del nginx
+    chkconfig --del nginx >/dev/null 2>&1
+    rm -rf ${nginx_location}
     rm -rf /etc/init.d/nginx
     echo
-    echo -e "[${green}Info!${plain} The nginx uninstall success!]"
+    echo -e "[${green}Info!${plain}] The nginx uninstall success!"
     echo
 }
 uninstall_php_fpm(){
@@ -757,7 +758,7 @@ uninstall_php_fpm(){
     then
         /etc/init.d/php-fpm stop >/dev/null 2>&1
     fi
-    chkconfig --del php-fpm
+    chkconfig --del php-fpm >/dev/null 2>&1
     rm -rf ${php_fpm_location}
     rm -rf /etc/init.d/php-fpm
     echo
