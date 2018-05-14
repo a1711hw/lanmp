@@ -598,7 +598,7 @@ install_nginx(){
     conf_nginx
     if ps -ef |grep -q 'httpd'
     then
-        killall httpd
+        killall httpd >/dev/null 2>&1
     fi
     /etc/init.d/nginx start
     check_ok nginx start
@@ -616,9 +616,9 @@ conf_php_fpm(){
 
     if [ -s ${php_fpm_location}/etc/php-fpm.conf.default ];then
         cp ${php_fpm_location}/etc/php-fpm.conf.default ${php_fpm_location}/etc/php-fpm.conf
-        sed -i 's/\[global\]/a\include=php-fpm.d\/*.conf' ${php_fpm_location}//etc/php-fpm.conf
-        sed -i 's/\[global\]/a\error_log = log\/php-fpm.log' ${php_fpm_location}//etc/php-fpm.conf
-        sed -i 's/\[global\]/a\pid = run\/php-fpm.pid' ${php_fpm_location}//etc/php-fpm.conf
+        sed -i '/\[global\]/a\include=php-fpm.d\/*.conf' ${php_fpm_location}/etc/php-fpm.conf
+        sed -i '/\[global\]/a\error_log = log\/php-fpm.log' ${php_fpm_location}/etc/php-fpm.conf
+        sed -i '/\[global\]/a\pid = run\/php-fpm.pid' ${php_fpm_location}/etc/php-fpm.conf
     else
         cat >${php_fpm_location}/etc/php-fpm.conf<<PHP_FPM
 [global]
