@@ -1,2 +1,2 @@
 # LANMP
-lanmp 一键安装脚本
+lamp and lnmp 一键安装脚本.
