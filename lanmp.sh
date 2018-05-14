@@ -545,7 +545,7 @@ conf_nginx(){
     fi
 
     # nginx and nginx.conf
-    if [ ${nginx_location} !== "/usr/local/nginx" ];then
+    if [ ! ${nginx_location} == "/usr/local/nginx" ];then
         sed -i "s#/usr/local/nginx#${nginx_location}#g" ./nginx
         sed -i "s#/usr/local/nginx#${nginx_location}#g" ./nginx.conf
     fi
@@ -563,7 +563,7 @@ conf_nginx(){
     if [ ! -d ${nginx_location}/conf/vhosts ];then
         mkdir ${nginx_location}/conf/vhosts
     fi
-    [ ${web_root} !== "/data/www" ] && sed -i "s#/data/www#${web_root}#g" ./vhost_test.conf
+    [ ! ${web_root} == "/data/www" ] && sed -i "s#/data/www#${web_root}#g" ./vhost_test.conf
     sed -i "s/locaalhost/${ipaddr}/g" ./vhost_test.conf
     mv ./vhost_test.conf ${nginx_location}/conf/vhosts/
 
@@ -738,7 +738,6 @@ uninstall_apache(){
     rm -rf ${php_location}
     echo
     echo -e "[${green}Info!${plain}] The apache and php uninstall success!"
-    echo
 }
 
 uninstall_nginx(){
@@ -751,7 +750,6 @@ uninstall_nginx(){
     rm -rf /etc/init.d/nginx
     echo
     echo -e "[${green}Info!${plain}] The nginx uninstall success!"
-    echo
 }
 uninstall_php_fpm(){
     if ps -ef |grep -q 'php-fpm'
@@ -762,8 +760,7 @@ uninstall_php_fpm(){
     rm -rf ${php_fpm_location}
     rm -rf /etc/init.d/php-fpm
     echo
-    echo -e "[${green}Info!${plain} The php-fpm uninstall success!]"
-    echo
+    echo -e "[${green}Info!${plain}] The php-fpm uninstall success!"
 }
 
 install_lamp(){
