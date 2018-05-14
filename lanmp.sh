@@ -749,7 +749,7 @@ uninstall_nginx(){
     chkconfig --del nginx
     rm -rf /etc/init.d/nginx
     echo
-    echo -e "[${green}Info!${plain}] The nginx uninstall success!"
+    echo -e "[${green}Info!${plain} The nginx uninstall success!]"
     echo
 }
 uninstall_php_fpm(){
