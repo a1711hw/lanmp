@@ -4,6 +4,19 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
+# Determine whether it is the root user and the system version.
+if [ $(id -u) != "0" ];then
+    echo "Error: This script must be run as root!"
+    exit 1
+elif [ `cat /etc/redhat-release |awk -F '.' '{print $1}'|awk '{print $NF}'` -ne 7 ];then
+    echo "You have to run script on CentOS 7"
+    exit 1
+fi
+
+if [ ! -s ./lanmp.conf ];then
+    wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/lanmp.conf
+fi
+
 main_dir=$(pwd)
 
 ipaddr=$(ip addr |egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' |egrep -v '^127' |head -n 1)
@@ -13,7 +26,7 @@ green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-mysql_location=$(grep '^mysql=' /.lanmp.conf |awk -F '=' '{print $NF}')
+mysql_location=$(grep '^mysql=' ./lanmp.conf |awk -F '=' '{print $NF}')
 mysql_data_dir=$(grep '^mysql_data=' ./lanmp.conf |awk -F '=' '{print $NF}')
 apache_location=$(grep '^apache=' ./lanmp.conf |awk -F '=' '{print $NF}')
 php_location=$(grep '^php=' ./lanmp.conf |awk -F '=' '{print $NF}')
@@ -373,7 +386,7 @@ VHOSTS_CONF
 
     # php service test
     cd ${main_dir}
-    if [ ! -d ./conf ];the
+    if [ ! -d ./conf ];then
         wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/conf/index.php
     else
         cd ./conf
@@ -820,19 +833,6 @@ uninstall_lnmp(){
     echo -e "[${green}Info!${plain}] Thanks for your use this script."
     blank_line
 }
-
-# Determine whether it is the root user and the system version.
-if [ $(id -u) != "0" ];then
-    echo "Error: This script must be run as root!"
-    exit 1
-elif [ `cat /etc/redhat-release |awk -F '.' '{print $1}'|awk '{print $NF}'` -ne 7 ];then
-    echo "You have to run script on CentOS 7"
-    exit 1
-fi
-
-if [ ! -s ./lanmp.conf ];then
-    wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/lanmp.conf
-fi
 
 case ${1} in
     lamp|lnmp)
