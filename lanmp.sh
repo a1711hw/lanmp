@@ -4,6 +4,8 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
+main_dir=$(pwd)
+
 ipaddr=$(ip addr |egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' |egrep -v '^127' |head -n 1)
 # color
 red='\033[0;31m'
@@ -11,9 +13,16 @@ green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-# mysql
-mysql_location=/usr/local/mysql
-mysql_data_dir=/data/mysql
+
+mysql_location=$(grep '^mysql=' /.lanmp.conf |awk -F '=' '{print $NF}')
+mysql_data_dir=$(grep '^mysql_data=' ./lanmp.conf |awk -F '=' '{print $NF}')
+apache_location=$(grep '^apache=' ./lanmp.conf |awk -F '=' '{print $NF}')
+php_location=$(grep '^php=' ./lanmp.conf |awk -F '=' '{print $NF}')
+nginx_location=$(grep '^nginx=' ./lanmp.conf |awk -F '=' '{print $NF}')
+php_fpm_location=$(grep '^php_fpm=' ./lanmp.conf |awk -F '=' '{print $NF}')
+web_root=$(grep '^web_data=' ./lanmp.conf |awk -F '=' '{print $NF}')
+
+# myssql version
 mysql=(
 MySQL-5.5
 MySQL-5.6
@@ -21,11 +30,7 @@ MySQL-5.7
 MySQL-8.0
 )
 
-# apache
-apache_location=/usr/local/apache24
-
 # php version
-php_location=/usr/local/php7
 php=(
 php-7.2
 php-7.1
@@ -33,14 +38,8 @@ php-7.0
 php-5.6
 )
 
-# nginx
-nginx_location=/usr/local/nginx
 
-# php-fpm
-php_fpm_location=/usr/local/php-fpm
 
-# website directory
-web_root=/data/www
 
 blank_line(){
     cat<<EOF
@@ -180,7 +179,7 @@ get_apache_ver(){
 
     apr_util_ver=$(wget --no-check-certificate -qO- http://mirrors.gigenet.com/apache/apr/ |egrep -o '"apr-util-.*.tar.gz"'|awk -F '"' '{print $2}'|awk -F '.tar' '{print $1}')
 
-    httpd_ver=$(wget -qO-  http://mirrors.gigenet.com/apache/httpd |grep 'httpd-.*.tar.gz'|awk -F '"' '{print $8}'|sort -nr|head -1|awk -F '.tar' '{print $1}')
+    httpd_ver=$(wget --no-check-certificate -qO-  http://mirrors.gigenet.com/apache/httpd |grep 'httpd-.*.tar.gz'|awk -F '"' '{print $8}'|sort -nr|head -1|awk -F '.tar' '{print $1}')
     if  [ -z ${apr_ver} ] && [ -z ${apr-util_ver} ] && [ -z ${httpd_ver} ];then
         echo
         echo -e "[${red}Error!${plain}] Get apache version failed"
@@ -518,40 +517,46 @@ install_php(){
 
 # nginx
 conf_nginx(){
-    [ -s ${nginx_location}/conf/nginx.conf ] && mv ${nginx_location}/conf/nginx.conf ${nginx_location}/conf/nginx.conf.bak
+    # nginx configuration.
+    cd ${main_dir}
 
-    cat > ${nginx_location}/conf/nginx.conf<<NGINX_CONF
-
-NGINX_CONF
-
-    mkdir ${nginx_location}/conf/vhosts
-    cat > ${nginx_location}/conf/vhosts/test.conf<<VHOSTS_CONF
-server
-{
-    listen 80;
-    server_name ${ipaddr};
-    root ${web_root}/test;
- 
-    location ~ \.php$
-    {
-        include fastcgi_params;
-        fastcgi_pass unix:/tmp/php-test.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME ${web_root}/test$fastcgi_script_name;
-    }
-}
-VHOSTS_CONF
-
-
-    # website php service test
-    if [ ! -d ${web_root}/test ];then
-        mkdir -p ${web_root}/test
+    # get conf for nginx.
+    if [ ! -d ./conf ];then
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/nginx
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/nginx.conf
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/index.php
+        wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/conf/vhost_test.conf
+    else
+        cd ./conf
     fi
-    cat >${web_root}/test/index.php<<TEST
-<?php
-    echo "The php parsed successfully!";
-?>
-TEST
+
+    # nginx and nginx.conf
+    if [ ${nginx_location} !== "/usr/local/nginx" ];then
+        sed -i "s#/usr/local/nginx#${nginx_location}#g" ./nginx
+        sed -i "s#/usr/local/nginx#${nginx_location}#g" ./nginx.conf
+    fi
+
+    [ -s /etc/init.d/nginx ] && mv /etc/init.d/nginx /etc/init.d/nginx.bak
+    mv ./nginx /etc/init.d/
+    chmod 755 /etc/init.d/nginx
+    chkconfig --add nginx
+    chkconfig nginx on
+
+    [ -s ${nginx_location}/conf/nginx.conf ] && mv ${nginx_location}/conf/nginx.conf ${nginx_location}/conf/nginx.conf.bak
+    mv ./nginx.conf ${nginx_location}/conf/
+
+    # Nginx combines php-fpm tests.
+    if [ ! -d ${nginx_location}/conf/vhosts ];then
+        mkdir ${nginx_location}/conf/vhosts
+    fi
+    [ ${web_root} !== "/data/www" ] && sed -i "s#/data/www#${web_root}#g" ./vhost_test.conf
+    sed -i "s/locaalhost/${ipaddr}/g" ./vhost_test.conf
+    mv ./vhost_test.conf ${nginx_location}/conf/vhosts/
+
+    if [ ! -d ${web_root}/test ];then
+            mkdir -p ${web_root}/test
+    fi
+    mv ./index.php ${web_root}/test/
 }
 
 install_nginx(){
@@ -577,9 +582,6 @@ install_nginx(){
     make &&  make install
     check_ok nginx install
     conf_nginx
-    chmod 755 /etc/init.d/nginx
-    chkconfig --add nginx
-    chkconfig nginx on
     if ps -ef |grep -q 'httpd'
     then
         killall httpd
@@ -818,7 +820,7 @@ uninstall_lnmp(){
     blank_line
 }
 
-
+# Determine whether it is the root user and the system version.
 if [ $(id -u) != "0" ];then
     echo "Error: This script must be run as root!"
     exit 1
@@ -827,6 +829,9 @@ elif [ `cat /etc/redhat-release |awk -F '.' '{print $1}'|awk '{print $NF}'` -ne 
     exit 1
 fi
 
+if [ ! -s ./lanmp.conf ];then
+    wget --no-check-certificate https://github.com/a1711hw/lanmp/blob/dev/lanmp.conf
+fi
 
 case ${1} in
     lamp|lnmp)
