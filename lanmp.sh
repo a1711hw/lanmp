@@ -450,7 +450,7 @@ install_apache(){
 
     if netstat -ap |grep -q 'nginx'
     then
-        killall nginx >/dev/null 2>&1
+        /etc/init.d/nginx stop >/dev/null 2>&1
         chkconfig --del nginx
     fi
 
@@ -572,7 +572,7 @@ install_php(){
     cp php.ini-production ${php_location}/etc/php.ini
     conf_php
     complete_info php
-    if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+    if netstat -ap |grep -q 'httpd' ;then
         return
     else
         ${apache_location}/bin/apachectl start
@@ -634,12 +634,14 @@ install_nginx(){
     if [ -d ${nginx_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The nginx already installed."
-        if netstat -ap |grep -q 'nginx' >/dev/null ;then
+        if netstat -ap |grep -q 'nginx' ;then
             start_info nginx
         else
             echo
             echo -e "[${green}Info!${plain}] Start it now..."
-            /etc/init.d/nginx start
+            chkconfig --add nginx
+            chkconfig nginx on
+            /etc/init.d/nginx restart
             check_ok nginx start
         fi
         return
