@@ -318,14 +318,16 @@ install_mysql(){
     if [ -d ${mysql_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The mysql already installed."
-        if ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null ;then
+        if netstat -ap |grep -q 'mysqld' ;then
             start_info mysql
         else
+            echo
+            echo -e "[${green}Info!${plain}] Start it now..."
             /etc/init.d/mysqld start
             check_ok mysql start
         fi
         return
-    elif ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null ;then
+    elif netstat -ap |grep -q 'mysqld' ;then
         echo
         echo -e "$[{red}Error!${plain}] Please uninstall the mysql service that you have installed."
         exit 1
@@ -446,13 +448,13 @@ install_apr(){
 install_apache(){
     install_info apache
 
-    if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'nginx'
     then
         killall nginx >/dev/null 2>&1
         chkconfig --del nginx
     fi
 
-    if ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'php-fpm'
     then
         killall php-fpm >/dev/null 2>&1
         chkconfig --del php-fpm
@@ -461,14 +463,16 @@ install_apache(){
     if [ -d ${apache_location} ] ;then
         echo
         echo -e "[${yellow}Warning!${plain}] The apache already installed."
-        if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+        if netstat -ap |grep -q 'httpd' >/dev/null ;then
             start_info httpd
         else
+            echo
+            echo -e "[${green}Info!${plain}] Start it now..."
             ${apache_location}/bin/apachectl start
             check_ok httpd start
         fi
         return
-    elif ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null ;then
+    elif netstat -ap |grep -q 'httpd' ;then
         echo
         echo -e "$[{red}Error!${plain}] Please uninstall the httpd service that you have installed."
         exit 1
@@ -525,7 +529,7 @@ install_php(){
         return
     fi
 
-    for php_dep in libmcrypt-devel libxml2-devel libcurl-devel libpng-devel freetype-devel libtool-ltdl-devel perl-devel bzip2 bzip2-devel libjpeg-devel
+    for php_dep in libmcrypt-devel libxml2-devel libcurl-devel libpng-devel freetype-devel libtool-ltdl-devel perl-devel bzip2 bzip2-devel libjpeg-turbo-devel
     do
         yum_deppak ${php_dep}
     done
@@ -623,21 +627,23 @@ conf_nginx(){
 install_nginx(){
     install_info nginx
 
-    if ps -ef |grep -q 'httpd' |grep -v 'grep'  >/dev/null;then
+    if netstat -ap |grep -q 'httpd' ;then
         killall httpd >/dev/null 2>&1
     fi
 
     if [ -d ${nginx_location} ];then
         echo
         echo -e "[${yellow}Warning!${plain}] The nginx already installed."
-        if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null ;then
+        if netstat -ap |grep -q 'nginx' >/dev/null ;then
             start_info nginx
         else
+            echo
+            echo -e "[${green}Info!${plain}] Start it now..."
             /etc/init.d/nginx start
             check_ok nginx start
         fi
         return
-    elif ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null ;then
+    elif netstat -ap |grep -q 'nginx' ;then
         echo
         echo -e "$[{red}Error!${plain}] Please uninstall the nginx service that you have installed."
         exit 1
@@ -703,21 +709,23 @@ install_php_fpm(){
     if [ -d ${php_fpm_location} ] ;then
         echo
         echo -e "[${yellow}Warning!${plain}] The php-fpm already installed."
-        if ps -ef|grep 'php-fpm' |grep -v 'grep' >/dev/null ;then
+        if netstat -ap |grep -q 'php-fpm' ;then
             start_info php-fpm
         else
+            echo
+            echo -e "[${green}Info!${plain}] Start it now..."
             /etc/init.d/php-fpm start
             check_ok php-fpm start
         fi
         return
-    elif ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null ;then
+    elif netstat -ap |grep -q 'php-fpm' ;then
         echo
         echo -e "$[{red}Error!${plain}] Please uninstall the php-fpm service that you have installed."
         exit 1
     fi
 
     # The installation depends on the software package.
-    for php_frm_dep in openssl-devel libcurl-devel libxml2-devel libjpeg-devel epel-release libmcrypt-devel libpng-devel freetype-devel libtool-ltdl-devel perl-devel bzip2 bzip2-devel
+    for php_frm_dep in openssl-devel libcurl-devel libxml2-devel libjpeg-turbo-devel epel-release libmcrypt-devel libpng-devel freetype-devel libtool-ltdl-devel perl-devel bzip2 bzip2-devel
     do
         yum_deppak ${php_frm_dep}
     done
@@ -777,7 +785,7 @@ install_php_fpm(){
 }
 
 uninstall_mysql(){
-    if ps -ef |grep 'mysqld' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'mysqld'
     then
         /etc/init.d/mysqld stop >/dev/null 2>&1
     fi
@@ -793,7 +801,7 @@ uninstall_mysql(){
 }
 
 uninstall_apache(){
-    if ps -ef |grep 'httpd' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'httpd'
     then
         ${apache_location}/bin/apachectl stop >/dev/null 2>&1
     fi
@@ -807,7 +815,7 @@ uninstall_apache(){
 }
 
 uninstall_nginx(){
-    if ps -ef |grep 'nginx' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'nginx'
     then
         /etc/init.d/nginx stop >/dev/null 2>&1
     fi
@@ -820,7 +828,7 @@ uninstall_nginx(){
 }
 
 uninstall_php_fpm(){
-    if ps -ef |grep 'php-fpm' |grep -v 'grep' >/dev/null
+    if netstat -ap |grep -q 'php-fpm'
     then
         /etc/init.d/php-fpm stop >/dev/null 2>&1
     fi
@@ -884,7 +892,7 @@ uninstall_lamp(){
     uninstall_mysql
     echo
     echo -e "[${green}Info!${plain}] The lnmp uninstall success!"
-    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/www_bak"
+    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/*_bak"
     echo -e "[${green}Info!${plain}] Thanks for your use this script."
     blank_line
 }
@@ -897,7 +905,7 @@ uninstall_lnmp(){
     uninstall_nginx
     echo
     echo -e "[${green}Info!${plain}] The lnmp uninstall success!"
-    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/www_bak"
+    echo -e "[${green}Info!${plain}] The site root has been backed up as /data/*_bak"
     echo -e "[${green}Info!${plain}] Thanks for your use this script."
     blank_line
 }
