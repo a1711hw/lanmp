@@ -14,7 +14,7 @@ elif [ `cat /etc/redhat-release |awk -F '.' '{print $1}'|awk '{print $NF}'` -ne 
 fi
 
 if [ ! -s ./lanmp.conf ];then
-    wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/dev/lanmp.conf
+    wget --no-check-certificate https://github.com/a1711hw/lanmp/raw/master/lanmp.conf
 fi
 
 main_dir=$(pwd)
@@ -34,12 +34,10 @@ nginx_location=$(grep '^nginx=' ./lanmp.conf |awk -F '=' '{print $NF}')
 php_fpm_location=$(grep '^php_fpm=' ./lanmp.conf |awk -F '=' '{print $NF}')
 web_root=$(grep '^web_data=' ./lanmp.conf |awk -F '=' '{print $NF}')
 
-# myssql version
+# mysql version
 mysql=(
 MySQL-5.5
 MySQL-5.6
-MySQL-5.7
-MySQL-8.0
 )
 
 # php version
@@ -276,7 +274,6 @@ download(){
 # mysql
 conf_mysql(){
     # MySQL configuration.
-    [ -s /etc/my.cnf ] && mv /etc/my.cnf /etc/my.cnf.bak
     if [ "${mysql_ver}" == "MySQL-5.5" ];then
         mem=$(free -m | awk '/Mem/ {print $2}')
         if [ ${mem} -gt "800" ] && [ ${mem} -lt "1000" ];then
@@ -361,6 +358,7 @@ install_mysql(){
     cd ${mysql_location}
 
     # MySQL initialization.
+    [ -s /etc/my.cnf ] && mv /etc/my.cnf /etc/my.cnf.bak
     ./scripts/mysql_install_db --user=mysql --datadir=${mysql_data_dir}
     check_ok mysql install
     conf_mysql
@@ -615,7 +613,7 @@ conf_nginx(){
         mkdir ${nginx_location}/conf/vhosts
     fi
     [ ! ${web_root} == "/data/www" ] && sed -i "s#/data/www#${web_root}#g" ./vhost_test.conf
-    sed -i "s/locaalhost/${ipaddr}/g" ./vhost_test.conf
+    sed -i "s/localhost/${ipaddr}/g" ./vhost_test.conf
     mv ./vhost_test.conf ${nginx_location}/conf/vhosts/
 
     if [ ! -d ${web_root}/test ];then
@@ -662,7 +660,7 @@ install_nginx(){
     cd ${nginx_ver}
     make clean
     ./configure --prefix=${nginx_location} \
-    --with-http_ssl_module
+    --with-http_ssl_module --with-http_v2_module
     check_ok nginx configure
     make &&  make install
     check_ok nginx install
@@ -913,7 +911,7 @@ uninstall_lnmp(){
 }
 
 case ${1} in
-    lamp|lnmp)
+    lamp|lnmp|mysql)
         install_${1}
         ;;
     uninstall_lamp|uninstall_lnmp)
