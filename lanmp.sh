@@ -1,5 +1,6 @@
 #! /bin/bash
 # The LAMP and LNMP install script.
+# update: 2019-05-27
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
@@ -190,17 +191,17 @@ get_mysql_ver(){
 }
 
 get_apache_ver(){
-    apr_ver=$(wget --no-check-certificate -qO- http://mirrors.gigenet.com/apache/apr/ |egrep -o '"apr-[0-9]{1,}.*.tar.gz"'|awk -F '"' '{print $2}'|awk -F '.tar' '{print $1}')
+    apr_ver=$(wget --no-check-certificate -qO- https://mirrors.tuna.tsinghua.edu.cn/apache/apr/ |egrep -o '"apr-[0-9]{1,}.*.tar.gz"'|awk -F '"' '{print $2}'|awk -F '.tar' '{print $1}' |tail -n1)
 
-    apr_util_ver=$(wget --no-check-certificate -qO- http://mirrors.gigenet.com/apache/apr/ |egrep -o '"apr-util-.*.tar.gz"'|awk -F '"' '{print $2}'|awk -F '.tar' '{print $1}')
+    apr_util_ver=$(wget --no-check-certificate -qO- https://mirrors.tuna.tsinghua.edu.cn/apache/apr/ |egrep -o '"apr-util-.*.tar.gz"'|awk -F '"' '{print $2}'|awk -F '.tar' '{print $1}')
 
-    httpd_ver=$(wget --no-check-certificate -qO-  http://mirrors.gigenet.com/apache/httpd |grep 'httpd-.*.tar.gz'|awk -F '"' '{print $8}'|sort -nr|head -1|awk -F '.tar' '{print $1}')
+    httpd_ver=$(wget --no-check-certificate -qO- https://mirrors.tuna.tsinghua.edu.cn/apache/httpd/ |grep -o '"httpd-.*.tar.gz"' |awk -F'"' '{print $2}' |awk -F '.tar' '{print $1}' |tail -n1)
     if  [ -z ${apr_ver} ] && [ -z ${apr-util_ver} ] && [ -z ${httpd_ver} ];then
         echo
         echo -e "[${red}Error!${plain}] Get apache version failed"
         exit 1
     fi
-    httpd_link="http://mirrors.gigenet.com/apache/httpd/${httpd_ver}.tar.gz"
+    httpd_link="https://mirrors.tuna.tsinghua.edu.cn/apache/httpd/${httpd_ver}.tar.gz"
     apr_link="http://mirrors.gigenet.com/apache/apr/${apr_ver}.tar.gz"
     apr_util_link="http://mirrors.gigenet.com/apache/apr/${apr_util_ver}.tar.gz"
 }
@@ -295,7 +296,7 @@ socket = /tmp/mysql.sock
 join_buffer_size = 128M
 sort_buffer_size = 2M
 read_rnd_buffer_size = 2M
-sql_mode=NO_ENGINE_SUBSTITUTTON,STRICT_TRANS_TABLES
+#sql_mode=NO_ENGINE_SUBSTITUTTON,STRICT_TRANS_TABLES
 EOF
     fi
 
@@ -923,3 +924,4 @@ case ${1} in
         echo
         ;;
 esac
+
