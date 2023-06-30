@@ -392,7 +392,7 @@ conf_apache_php(){
 
     # The apache vhosts configuration
     cp ${apache_location}/conf/extra/httpd-vhosts.conf ${apache_location}/conf/extra/httpd-vhosts.conf.bak
-    grep '^#' ${apache_location}/conf/extra/httpd-vhosts.conf >${apache_location}/conf/extra/httpd-vhosts.conf
+    grep '^#' ${apache_location}/conf/extra/httpd-vhosts.conf.bak >${apache_location}/conf/extra/httpd-vhosts.conf
     cat >>${apache_location}/conf/extra/httpd-vhosts.conf<<VHOSTS_CONF
 <VirtualHost *:80>
     DocumentRoot "${web_root}/test"
